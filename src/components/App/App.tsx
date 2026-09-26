@@ -1,12 +1,6 @@
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import toast from "react-hot-toast";
 
 import SearchBox from "../SearchBox/SearchBox";
 import Pagination from "../Pagination/Pagination";
@@ -14,9 +8,7 @@ import NoteList from "../NoteList/NoteList";
 import Modal from "../Modal/Modal";
 import NoteForm from "../NoteForm/NoteForm";
 
-import { createNote, fetchNotes } from "../../services/noteService";
-
-import type { CreateNoteData } from "../../services/noteService";
+import { fetchNotes } from "../../services/noteService";
 
 import css from "./App.module.css";
 
@@ -28,29 +20,10 @@ export default function App() {
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const queryClient = useQueryClient();
-
   const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: ["notes", search, page],
     queryFn: () => fetchNotes(search, page, PER_PAGE),
     placeholderData: keepPreviousData,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: createNote,
-
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["notes"],
-      });
-
-      setIsModalOpen(false);
-      toast.success("Note created");
-    },
-
-    onError: () => {
-      toast.error("Failed to create note");
-    },
   });
 
   const handleSearch = useDebouncedCallback((value: string) => {
@@ -63,8 +36,8 @@ export default function App() {
     handleSearch(value);
   };
 
-  const handleCreateNote = async (values: CreateNoteData) => {
-    await createMutation.mutateAsync(values);
+  const closeModal = () => {
+    setIsModalOpen(false);
   };
 
   return (
@@ -100,12 +73,8 @@ export default function App() {
       {data && data.notes.length === 0 && !isLoading && <p>No notes found.</p>}
 
       {isModalOpen && (
-        <Modal onClose={() => setIsModalOpen(false)}>
-          <NoteForm
-            onSubmit={handleCreateNote}
-            onCancel={() => setIsModalOpen(false)}
-            isSubmitting={createMutation.isPending}
-          />
+        <Modal onClose={closeModal}>
+          <NoteForm onClose={closeModal} />
         </Modal>
       )}
     </div>
